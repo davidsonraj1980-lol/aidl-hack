@@ -608,7 +608,7 @@
               </div>
             </div>
 
-            <div class="flex items-center justify-between pt-0.5">
+            <div class="flex items-center justify-between pt-0.5 mb-2">
               <label class="flex items-center space-x-1 cursor-pointer text-[9.5px] text-slate-600">
                 <input type="checkbox" id="mock-fallback-toggle" class="rounded text-indigo-600" checked />
                 <span>Mock Fallback</span>
@@ -616,6 +616,14 @@
               <button id="save-config-btn" class="btn btn-primary btn-mini text-[9.5px] py-1 px-2">
                 Save & Connect
               </button>
+            </div>
+
+            <div class="pt-1.5 border-t border-slate-100 flex items-center justify-between">
+              <button type="button" class="text-[9px] text-red-600 hover:text-red-700 flex items-center space-x-1 font-medium" onclick="purgeUserData()">
+                <i class="fa-solid fa-trash-can text-[8px]"></i>
+                <span>Purge Session & Saved Keys</span>
+              </button>
+              <span class="text-[8px] text-slate-400 font-mono">GDPR / PII Reset</span>
             </div>
           </div>
         </div>
