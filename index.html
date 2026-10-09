@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>RouteWise — Airport Cab-Pooling MVP</title>
+  <meta name="description" content="Match verified passengers from the same flight heading in the same direction to split premium airport cab fares." />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Fraunces, Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Supabase JS Client v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Custom Design System Styles -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <div class="device-wrapper">
+
+    <!-- Actual Phone Resolution Switcher Bar -->
+    <div class="resolution-bar" id="resolution-bar">
+      <span>Device:</span>
+      <button class="res-btn active" data-res="mini" data-w="348" data-h="608" title="iPhone 13 (Compact 348 x 608 px)">
+        <i class="fa-brands fa-apple"></i> iPhone 13
+      </button>
+      <button class="res-btn" data-res="iphone14" data-w="375" data-h="650" title="iPhone 13 Standard (375 x 650 px)">
+        375 × 650
+      </button>
+      <button class="res-btn" data-res="fullscreen" title="100% Fullscreen / Native Mobile Viewport">
+        <i class="fa-solid fa-expand"></i> Full
+      </button>
+    </div>
+
+    <!-- Side Hardware Buttons Container -->
+    <div class="side-buttons-wrapper">
+      <div class="btn-mute" title="Ring / Silent Switch"></div>
+      <div class="btn-vol-up" title="Volume Up"></div>
+      <div class="btn-vol-down" title="Volume Down"></div>
+      <div class="btn-power" title="Side Power Button"></div>
+
+      <!-- Authentic iPhone 13 Hardware Chassis -->
+      <div class="device" id="device-container">
+        
+        <!-- iPhone 13 Notch (Attached Top Bezel + Top Speaker Grille + Camera) -->
+        <div class="notch">
+          <div class="notch-speaker"></div>
+          <div class="notch-sensor"></div>
+          <div class="notch-camera"></div>
+        </div>
+
+        <!-- iPhone 13 Status Bar (Level with Notch Wings) -->
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons">
+            <i class="fa-solid fa-signal text-[9px]"></i>
+            <i class="fa-solid fa-wifi text-[9px]"></i>
+            <i class="fa-solid fa-battery-full text-[10px]"></i>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SCREEN 1: POOL (MAIN MVP FLOW)                                   -->
+        <!-- ================================================================ -->
+        <div class="screen active" id="screen-pool">
+          
+          <!-- Compact Topbar -->
+          <div class="topbar">
+            <div class="flex items-center space-x-1.5">
+              <div class="w-5 h-5 rounded-md bg-indigo-600 flex items-center justify-center text-white text-[10px] shadow-sm">
+                <i class="fa-solid fa-route"></i>
+              </div>
+              <div>
+                <h1>RouteWise</h1>
+                <div class="text-[8.5px] text-slate-500 font-medium leading-none">Airport Cab Split</div>
+              </div>
+            </div>
+
+            <!-- Supabase PostGIS Live Pill Trigger -->
+            <button id="postgis-inspector-btn" class="flex items-center space-x-1 px-1.5 py-0.2 rounded-full bg-slate-100 border border-slate-200 text-[8.5px] font-mono hover:bg-slate-200 transition-colors" title="Inspect PostGIS Connection">
+              <span id="db-status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span id="db-status-text" class="text-slate-700 font-semibold">PostGIS</span>
+              <i class="fa-solid fa-terminal text-[7.5px] text-slate-400"></i>
+            </button>
+          </div>
+
+          <!-- Ultra-Dense Hero Flight Banner -->
+          <div class="airport-hero-card">
+            <div class="flex items-center justify-between mb-0.5">
+              <div class="hero-flight-tag">
+                <i class="fa-solid fa-plane text-[8px]"></i>
+                <span id="hero-flight-badge">6E-241 • DEL → BLR</span>
+              </div>
+              <span class="text-[9px] text-cyan-300 font-mono font-bold">Bay B4</span>
+            </div>
+            <div class="text-[13.5px] font-bold tracking-tight text-white mb-0.2" style="font-family:'Fraunces',serif;">
+              Split Airport Cabs
+            </div>
+            <p class="text-[9.5px] text-slate-300 leading-tight mb-1.5">
+              Match verified flight passengers within 5km. Save up to 75%.
+            </p>
+            <div class="flex items-center justify-between pt-1 border-t border-white/10 text-[9px] text-slate-300">
+              <div>Airport: <b class="text-white">Bengaluru (BLR)</b></div>
+              <div>Baggage: <b class="text-cyan-300">Carousel 4</b></div>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 1: INPUT VIEW (Zero-Scroll Layout) -->
+          <div id="pool-input-subview" class="px-2.5 space-y-1.5">
+            
+            <!-- Compact User Profile -->
+            <div class="bg-white border border-slate-200 rounded-xl p-2 shadow-xs">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Passenger</span>
+                <span class="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 text-[8.5px] font-semibold border border-emerald-200">
+                  <i class="fa-solid fa-check text-[7.5px]"></i>
+                  <span>Verified Ticket</span>
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <div>
+                  <input type="text" id="user-name-input" value="Arjun Rao" placeholder="Name" class="app-input py-1 px-2 text-[10.5px]" />
+                </div>
+                <div>
+                  <input type="text" id="user-seat-input" value="15F" placeholder="Seat" class="app-input py-1 px-2 text-[10.5px] uppercase font-mono" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Search Form -->
+            <form id="ride-form" class="space-y-1.5">
+              <div>
+                <div class="flex items-center justify-between mb-0.5">
+                  <label for="flight-number-input" class="text-[10.5px] font-bold text-slate-700">Flight Number</label>
+                  <div class="flex items-center space-x-1">
+                    <button type="button" class="flight-pill px-1.5 py-0.2 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-[8.5px] font-mono hover:bg-indigo-100" data-flight="6E-241">
+                      6E-241
+                    </button>
+                    <button type="button" class="flight-pill px-1.5 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-700 text-[8.5px] font-mono hover:bg-slate-200" data-flight="AI-804">
+                      AI-804
+                    </button>
+                  </div>
+                </div>
+                <input 
+                  type="text" 
+                  id="flight-number-input" 
+                  value="6E-241" 
+                  required 
+                  class="app-input uppercase font-mono font-bold text-[11px] py-1 tracking-wide"
+                />
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-0.5">
+                  <label for="destination-select" class="text-[10.5px] font-bold text-slate-700">Drop Destination</label>
+                  <span class="text-[8.5px] text-emerald-600 font-semibold">5km Radius</span>
+                </div>
+                <select id="destination-select" class="app-input text-[10.5px] py-1 cursor-pointer font-medium">
+                  <option value="indiranagar" data-name="Indiranagar 100ft Road" data-lat="12.9784" data-lng="77.6408" selected>
+                    📍 Indiranagar 100ft Rd (3 matches)
+                  </option>
+                  <option value="koramangala" data-name="Koramangala 5th Block" data-lat="12.9352" data-lng="77.6245">
+                    📍 Koramangala 5th Block
+                  </option>
+                  <option value="domlur" data-name="Domlur Flyover / EGL" data-lat="12.9610" data-lng="77.6387">
+                    📍 Domlur Flyover (~2km)
+                  </option>
+                  <option value="whitefield" data-name="Whitefield ITPL" data-lat="12.9863" data-lng="77.7340">
+                    📍 Whitefield ITPL (~12km)
+                  </option>
+                </select>
+                <div id="dest-coords-preview" class="text-[8.5px] text-slate-400 mt-0.5 font-mono">
+                  PostGIS: Lat 12.9784, Lng 77.6408
+                </div>
+              </div>
+
+              <!-- Vehicle Preview Card -->
+              <div class="bg-white border border-slate-200 rounded-xl p-1.5 flex items-center justify-between shadow-xs">
+                <div class="flex items-center space-x-1.5">
+                  <div class="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-[11px]">
+                    <i class="fa-solid fa-car-side"></i>
+                  </div>
+                  <div>
+                    <div class="text-[10px] font-bold text-slate-800">Innova Hycross 6-Seater</div>
+                    <div class="text-[8.5px] text-slate-500">Airport Bay B4 Pickup</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[11px] font-bold text-slate-800" style="font-family:'Fraunces',serif;">₹1,200</div>
+                  <div class="text-[8px] text-emerald-600 font-bold">Split up to 4x</div>
+                </div>
+              </div>
+
+              <!-- Primary CTA Button (Visible on screen without scrolling!) -->
+              <button type="submit" class="btn btn-primary w-full py-2 text-[11.5px] font-bold shadow-md">
+                <i class="fa-solid fa-users-viewfinder text-[11px]"></i>
+                <span>Find Flight Pool Members</span>
+              </button>
+            </form>
+
+            <div class="text-center pt-0.2">
+              <p class="text-[9px] text-slate-400 flex items-center justify-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>24 passengers landed on <strong>6E-241</strong> ready</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 2: SEARCHING VIEW (Compact Radar) -->
+          <div id="pool-searching-subview" class="hidden px-2.5 py-4 flex flex-col items-center justify-center text-center space-y-3">
+            <div class="relative w-32 h-32 flex items-center justify-center">
+              <div class="absolute inset-0 rounded-full border border-indigo-200"></div>
+              <div class="absolute inset-3 rounded-full border border-indigo-300"></div>
+              <div class="absolute inset-6 rounded-full border border-cyan-400 border-dashed"></div>
+              <div class="absolute inset-0 rounded-full bg-indigo-500/10 pulse-ring-anim"></div>
+              <div class="absolute inset-0 rounded-full overflow-hidden">
+                <div class="w-full h-full radar-spinner origin-center" style="background: conic-gradient(from 0deg, rgba(79, 70, 229, 0.4) 0deg, rgba(6, 182, 212, 0) 60deg);"></div>
+              </div>
+              <div class="relative z-10 w-9 h-9 rounded-full bg-white border-2 border-indigo-600 flex items-center justify-center text-indigo-600 shadow-md float-icon">
+                <i class="fa-solid fa-plane text-xs"></i>
+              </div>
+            </div>
+
+            <div class="space-y-1 max-w-xs">
+              <div class="inline-flex items-center space-x-1 px-2 py-0.2 rounded-full bg-indigo-50 text-indigo-700 text-[9px] font-mono font-semibold border border-indigo-200">
+                <i class="fa-solid fa-circle-notch fa-spin text-[7px]"></i>
+                <span id="searching-status-pill">Flight 6E-241</span>
+              </div>
+              <h2 id="searching-step-title" class="text-xs font-bold text-slate-800" style="font-family:'Fraunces',serif;">
+                Querying PostGIS Cluster...
+              </h2>
+              <p id="searching-step-desc" class="text-[9.5px] text-slate-500 leading-tight">
+                Executing PostGIS <code class="text-indigo-600 font-mono">ST_DWithin()</code> in 5km radius.
+              </p>
+            </div>
+
+            <button id="cancel-search-btn" class="btn btn-outline btn-mini py-0.5 px-2.5 text-[9.5px]">
+              <i class="fa-solid fa-arrow-left"></i>
+              <span>Cancel</span>
+            </button>
+          </div>
+
+          <!-- SUB-VIEW 3: MATCH SUCCESS VIEW -->
+          <div id="pool-success-subview" class="hidden px-2.5 space-y-2">
+            
+            <div class="p-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs flex items-center justify-between">
+              <div class="flex items-center space-x-1.5">
+                <div class="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center text-white text-[11px]">
+                  <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div>
+                  <div class="flex items-center space-x-1">
+                    <h3 class="text-[10.5px] font-bold">Pool Match Confirmed!</h3>
+                    <span id="match-count-badge" class="px-1 py-0.2 rounded-full bg-white/20 text-white text-[8px] font-bold">3 Co-Riders</span>
+                  </div>
+                  <p class="text-[9px] text-emerald-100">Flight <b id="match-flight-tag">6E-241</b> • Within 5km Radius</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Boarding Pass Style Split Fare Card -->
+            <div class="rounded-xl bg-white border border-slate-200 shadow-xs overflow-hidden">
+              <div class="p-2.5 bg-slate-900 text-white">
+                <div class="flex items-center justify-between text-[9px] text-slate-400 mb-0.2">
+                  <span>SHARED CAB FARE</span>
+                  <span class="text-emerald-400 font-bold" id="savings-percent-text">67% Saved</span>
+                </div>
+                <div class="flex items-baseline justify-between">
+                  <div>
+                    <span class="text-xl font-extrabold text-white" id="split-fare-display" style="font-family:'Fraunces',serif;">₹400</span>
+                    <span class="text-[9px] text-slate-400 font-medium"> / your share</span>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-[9px] text-slate-400 line-through" id="original-fare-display">₹1,200 original</div>
+                    <div class="text-[9.5px] font-semibold text-emerald-400" id="total-saved-display">You save ₹800</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="perforated-border h-0.5 w-full"></div>
+
+              <div class="p-1.5 bg-white flex items-center justify-between text-[9px]">
+                <div>
+                  <div class="text-[8px] text-slate-400 uppercase font-bold">Airport Pickup</div>
+                  <div class="text-[9.5px] font-bold text-slate-800">Terminal 1 • Cab Bay B4</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[8px] text-slate-400 uppercase font-bold">Vehicle Class</div>
+                  <div class="text-[9.5px] font-bold text-indigo-600">Innova Hycross 6-Seater</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Matched Passengers List -->
+            <div>
+              <div class="flex items-center justify-between mb-0.5 px-0.5">
+                <h4 class="text-[9.5px] font-bold text-slate-700 uppercase tracking-wide">
+                  Matched Co-Passengers (<span id="riders-list-count">3</span>)
+                </h4>
+                <span class="text-[8.5px] text-emerald-600 font-medium">Within 5km</span>
+              </div>
+              <div id="matched-riders-container" class="space-y-1"></div>
+            </div>
+
+            <!-- Actions -->
+            <div class="space-y-1 pt-0.5">
+              <button id="book-cab-btn" class="btn btn-emerald w-full py-2 text-[11px] font-bold">
+                <i class="fa-solid fa-lock text-[10px]"></i>
+                <span id="book-btn-text">Lock Cab & Pay ₹400 via UPI</span>
+              </button>
+              <div class="grid grid-cols-2 gap-1">
+                <button id="open-chat-btn" class="btn btn-outline text-[10px] py-1">
+                  <i class="fa-solid fa-comment-dots text-indigo-600"></i>
+                  <span>Flight Chat</span>
+                </button>
+                <button id="new-search-btn" class="btn btn-outline text-[10px] py-1">
+                  <i class="fa-solid fa-rotate-left text-slate-500"></i>
+                  <span>New Search</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- SUB-VIEW 4: NO MATCH EMPTY STATE -->
+          <div id="pool-nomatch-subview" class="hidden px-2.5 py-4 flex flex-col items-center justify-center text-center space-y-2">
+            <div class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-base">
+              <i class="fa-solid fa-users-slash"></i>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold text-slate-800" style="font-family:'Fraunces',serif;">No Matches Within 5km</h3>
+              <p class="text-[9px] text-slate-500 mt-0.2 max-w-xs">
+                No active passengers on flight <span id="no-match-flight" class="font-mono font-bold text-indigo-600">6E-241</span> are heading here right now.
+              </p>
+            </div>
+            <button id="back-to-input-btn" class="btn btn-primary btn-mini text-[10px] py-1 px-2.5">
+              <span>Try Another Destination</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SCREEN 2: CAB & BAY                                              -->
+        <!-- ================================================================ -->
+        <div class="screen" id="screen-cab">
+          <div class="topbar">
+            <h1>Airport Cab Bay</h1>
+            <div class="avatar">R</div>
+          </div>
+
+          <div class="p-2.5 space-y-2">
+            <div class="bg-indigo-900 text-white rounded-xl p-2.5 shadow-xs relative overflow-hidden">
+              <div class="text-[8.5px] text-cyan-300 font-mono uppercase font-bold tracking-wider mb-0.2">
+                BLR TERMINAL 1 • DESIGNATED PICKUP
+              </div>
+              <div class="text-base font-bold mb-0.2" style="font-family:'Fraunces',serif;">
+                Bay B4 • Pillar 12
+              </div>
+              <p class="text-[9px] text-slate-300">
+                Exit Gate 3, cross pedestrian lane to Cab Hub.
+              </p>
+              <div class="mt-1.5 pt-1.5 border-t border-white/10 flex items-center justify-between text-[9.5px]">
+                <div>ETA: <b class="text-emerald-400">4 mins</b></div>
+                <div>OTP: <b class="font-mono tracking-widest text-white bg-white/20 px-1 py-0.2 rounded text-[10px]">8492</b></div>
+              </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-xl p-2 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-bold text-slate-800">Toyota Innova Hycross</div>
+                  <div class="text-[9px] text-slate-500">KA-04-MB-2041 • Uber Premier</div>
+                </div>
+                <span class="px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 text-[8px] font-bold border border-emerald-200">
+                  Assigned
+                </span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-1 text-center pt-0.5 border-t border-slate-100">
+                <div class="p-1 rounded-lg bg-slate-50">
+                  <div class="text-[8px] text-slate-500">Driver</div>
+                  <div class="text-[9.5px] font-bold text-slate-800">Manjunath</div>
+                  <div class="text-[8px] text-amber-600 font-semibold">★ 4.94</div>
+                </div>
+                <div class="p-1 rounded-lg bg-slate-50">
+                  <div class="text-[8px] text-slate-500">Luggage</div>
+                  <div class="text-[9.5px] font-bold text-slate-800">4 Bags</div>
+                  <div class="text-[8px] text-indigo-600 font-semibold">Spacious</div>
+                </div>
+                <div class="p-1 rounded-lg bg-slate-50">
+                  <div class="text-[8px] text-slate-500">Fuel</div>
+                  <div class="text-[9.5px] font-bold text-slate-800">Hybrid EV</div>
+                  <div class="text-[8px] text-emerald-600 font-semibold">Zero Surge</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-xl p-2 space-y-1">
+              <div class="text-[10px] font-bold text-slate-800">Walking Guide</div>
+              <div class="relative h-16 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-center p-1.5">
+                <div>
+                  <i class="fa-solid fa-map-location-dot text-indigo-600 text-sm mb-0.2"></i>
+                  <div class="text-[9.5px] font-bold text-slate-700">Follow Green Line to Bay B4</div>
+                  <div class="text-[8px] text-slate-500">2 min walk from Carousel 4</div>
+                </div>
+              </div>
+              <button class="btn btn-dark w-full py-1.5 text-[10.5px]" onclick="showToast('Calling driver Manjunath (+91 98451 00000)...')">
+                <i class="fa-solid fa-phone text-[10px]"></i>
+                <span>Call Driver</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SCREEN 3: FLIGHT POOL CHAT                                        -->
+        <!-- ================================================================ -->
+        <div class="screen" id="screen-chat">
+          <div class="topbar">
+            <div>
+              <h1>Flight 6E-241 Chat</h1>
+              <div class="text-[8.5px] text-slate-500">4 Verified Co-Passengers</div>
+            </div>
+            <div class="avatar">R</div>
+          </div>
+
+          <div class="p-2.5 flex-1 flex flex-col justify-between space-y-1.5">
+            <div class="space-y-1.5 overflow-y-auto text-xs" id="chat-messages-container">
+              <div class="text-center text-[8.5px] text-slate-400 font-medium my-0.2">Flight 6E-241 Arrived 20:15</div>
+
+              <div class="flex items-start space-x-1">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150" class="w-5 h-5 rounded-full object-cover border border-slate-300" />
+                <div>
+                  <div class="text-[8px] font-bold text-slate-600">Ananya (Seat 8C)</div>
+                  <div class="bg-white border border-slate-200 rounded-xl rounded-tl-none p-1.5 text-slate-800 max-w-[190px] text-[10px] shadow-xs">
+                    Hey! Got my bag from Belt 4. Headed to Bay B4 now!
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-start space-x-1">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150" class="w-5 h-5 rounded-full object-cover border border-slate-300" />
+                <div>
+                  <div class="text-[8px] font-bold text-slate-600">Rohan (Seat 14A)</div>
+                  <div class="bg-white border border-slate-200 rounded-xl rounded-tl-none p-1.5 text-slate-800 max-w-[190px] text-[10px] shadow-xs">
+                    Great! I am at Pillar 12 near coffee shop. Blue hoodie.
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-end justify-end space-x-1">
+                <div class="text-right">
+                  <div class="text-[8px] font-bold text-indigo-600">You (Seat 15F)</div>
+                  <div class="bg-indigo-600 text-white rounded-xl rounded-tr-none p-1.5 max-w-[190px] text-[10px] shadow-xs text-left">
+                    On my way too! Splitting Innova to Indiranagar & Koramangala.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-1 border-t border-slate-200 flex items-center space-x-1">
+              <input type="text" id="chat-input-field" placeholder="Message pool..." class="app-input text-[10px] py-1" />
+              <button class="btn btn-primary btn-mini py-1 px-2 text-[10px]" id="send-chat-btn">
+                <i class="fa-solid fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- SCREEN 4: VERIFY & SAFETY                                          -->
+        <!-- ================================================================ -->
+        <div class="screen" id="screen-verify">
+          <div class="topbar">
+            <h1>Passenger Trust</h1>
+            <div class="avatar">R</div>
+          </div>
+
+          <div class="p-2.5 space-y-2">
+            <div class="bg-white border border-slate-200 rounded-xl p-2 text-center">
+              <div class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs mx-auto mb-0.5 border border-emerald-200">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Flight Verification Score</div>
+              <div class="text-lg font-extrabold text-slate-800 mt-0.2" style="font-family:'Fraunces',serif;">99.8%</div>
+              <p class="text-[9px] text-slate-500 mt-0.2">
+                Verified against active flight manifest. Zero strangers.
+              </p>
+            </div>
+
+            <div class="bg-slate-900 text-white rounded-xl p-2.5 shadow-xs space-y-1.5">
+              <div class="flex items-center justify-between border-b border-white/10 pb-1">
+                <span class="text-[9.5px] font-bold text-cyan-300 font-mono">DIGITAL BOARDING PASS</span>
+                <span class="text-[7.5px] bg-emerald-500/20 text-emerald-400 px-1 py-0.2 rounded-full border border-emerald-500/30 font-semibold">VERIFIED</span>
+              </div>
+              <div class="grid grid-cols-3 gap-1 text-center text-xs">
+                <div>
+                  <div class="text-[7.5px] text-slate-400">FLIGHT</div>
+                  <div class="font-bold font-mono text-white text-[11px]">6E-241</div>
+                </div>
+                <div>
+                  <div class="text-[7.5px] text-slate-400">SEAT</div>
+                  <div class="font-bold font-mono text-white text-[11px]">15F</div>
+                </div>
+                <div>
+                  <div class="text-[7.5px] text-slate-400">GATE</div>
+                  <div class="font-bold font-mono text-white text-[11px]">G14</div>
+                </div>
+              </div>
+              <div class="pt-0.5 text-center">
+                <button class="btn btn-outline btn-mini text-white border-white/20 text-[9px] py-0.5 px-2" onclick="showToast('Boarding Pass QR verified with CISF database')">
+                  <i class="fa-solid fa-qrcode mr-1"></i> Show Ticket QR
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-red-50 border border-red-200 rounded-xl p-2 text-center space-y-1">
+              <div class="text-[10px] font-bold text-red-800">Airport Police & CISF Support</div>
+              <p class="text-[8.5px] text-red-600">
+                Terminal 1 rapid security helpline available 24x7.
+              </p>
+              <button class="btn btn-dark w-full py-1.5 text-[10px] bg-red-700 hover:bg-red-800" onclick="showToast('🚨 Airport Security SOS Alert Sent!')">
+                <i class="fa-solid fa-triangle-exclamation text-[9px]"></i>
+                <span>Emergency SOS Help</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Toast Notification -->
+        <div class="toast" id="toast"></div>
+
+        <!-- UPI Modal -->
+        <div class="modal-overlay" id="upiModal">
+          <div class="modal-card">
+            <div class="modal-emoji">💳</div>
+            <h2>Split Cab Fare</h2>
+            <p id="upiModalSubtitle">Your share for flight 6E-241 Innova cab is <b>₹400</b>.</p>
+
+            <div class="space-y-1.5 mb-2.5 text-left">
+              <div class="p-1.5 rounded-xl border border-slate-200 flex items-center justify-between cursor-pointer hover:border-indigo-500" onclick="confirmPayment('Google Pay')">
+                <div class="flex items-center space-x-1.5">
+                  <div class="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-[9px]">GPay</div>
+                  <div><div class="text-[11px] font-bold">Google Pay UPI</div><div class="text-[8.5px] text-slate-500">Auto-split with pool</div></div>
+                </div>
+                <span class="text-[11px] font-bold text-indigo-600">Pay ₹400 →</span>
+              </div>
+
+              <div class="p-1.5 rounded-xl border border-slate-200 flex items-center justify-between cursor-pointer hover:border-indigo-500" onclick="confirmPayment('PhonePe')">
+                <div class="flex items-center space-x-1.5">
+                  <div class="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[9px]">PhPe</div>
+                  <div><div class="text-[11px] font-bold">PhonePe</div><div class="text-[8.5px] text-slate-500">Instant UPI transfer</div></div>
+                </div>
+                <span class="text-[11px] font-bold text-indigo-600">Pay ₹400 →</span>
+              </div>
+
+              <div class="p-1.5 rounded-xl border border-slate-200 flex items-center justify-between cursor-pointer hover:border-indigo-500" onclick="confirmPayment('Cash / Bay')">
+                <div class="flex items-center space-x-1.5">
+                  <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">💵</div>
+                  <div><div class="text-[11px] font-bold">Pay at Cab Drop</div><div class="text-[8.5px] text-slate-500">Cash or Card to driver</div></div>
+                </div>
+                <span class="text-[10px] font-bold text-slate-600">Select →</span>
+              </div>
+            </div>
+
+            <button class="btn btn-outline py-1.5 text-[11px]" onclick="closeUpiModal()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- PostGIS Modal -->
+        <div class="modal-overlay" id="postgisModal">
+          <div class="modal-card text-left">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center space-x-1">
+                <div class="text-base">🗄️</div>
+                <h2 class="text-xs font-bold text-slate-800 m-0">PostGIS Engine</h2>
+              </div>
+              <button id="close-postgis-modal-btn" class="text-slate-400 hover:text-slate-700 text-xs">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div class="bg-slate-900 rounded-xl p-2 text-cyan-300 font-mono text-[9px] space-y-0.5 mb-2">
+              <div class="text-slate-400">// Stored Procedure:</div>
+              <div>SELECT * FROM match_riders('6E-241', 12.9784, 77.6408);</div>
+              <div class="text-emerald-400">// ST_DWithin(coords, origin, 5000)</div>
+            </div>
+
+            <div class="space-y-1 mb-2 text-xs">
+              <div>
+                <label class="block text-[9px] font-bold text-slate-500 mb-0.5">SUPABASE URL</label>
+                <input type="text" id="supabase-url-input" placeholder="https://xyz.supabase.co" class="app-input text-[10px] py-1 font-mono" />
+              </div>
+              <div>
+                <label class="block text-[9px] font-bold text-slate-500 mb-0.5">ANON KEY</label>
+                <input type="password" id="supabase-key-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI..." class="app-input text-[10px] py-1 font-mono" />
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-0.5">
+              <label class="flex items-center space-x-1 cursor-pointer text-[9.5px] text-slate-600">
+                <input type="checkbox" id="mock-fallback-toggle" class="rounded text-indigo-600" checked />
+                <span>Mock Fallback</span>
+              </label>
+              <button id="save-config-btn" class="btn btn-primary btn-mini text-[9.5px] py-1 px-2">
+                Save & Connect
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- iOS Home Indicator Bar -->
+        <div class="home-indicator"></div>
+
+        <!-- Compact Bottom Navigation Bar -->
+        <div class="navbar" id="navbar">
+          <button class="navitem active" data-screen="screen-pool" onclick="goToScreen('screen-pool')">
+            <span class="nav-icon"><i class="fa-solid fa-plane-arrival"></i></span>
+            <span>Pool</span>
+          </button>
+          <button class="navitem" data-screen="screen-cab" onclick="goToScreen('screen-cab')">
+            <span class="nav-icon"><i class="fa-solid fa-car-side"></i></span>
+            <span>Cab & Bay</span>
+          </button>
+          <button class="navitem" data-screen="screen-chat" onclick="goToScreen('screen-chat')">
+            <span class="nav-icon"><i class="fa-solid fa-comments"></i></span>
+            <span>Flight Chat</span>
+          </button>
+          <button class="navitem" data-screen="screen-verify" onclick="goToScreen('screen-verify')">
+            <span class="nav-icon"><i class="fa-solid fa-shield-halved"></i></span>
+            <span>Verified</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
